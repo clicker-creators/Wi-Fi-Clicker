@@ -11,7 +11,7 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
-            touch-action: none; /* スマホの意図しない挙動を全停止 */
+            touch-action: none;
         }
 
         #collection-counter {
@@ -26,15 +26,15 @@
         #level-display { color: #87CEEB; font-weight: bold; letter-spacing: 2px; }
 
         /* Wi-Fiアイコンの土台 */
-        #wifi-target {
+        #wifi-wrapper {
             width: 75vmin; height: 75vmin;
             position: relative;
             cursor: pointer;
             z-index: 5;
         }
 
-        /* 共通のWi-Fiパーツスタイル */
-        .wifi-svg-base {
+        /* 全てのSVGを重ねるための基本スタイル */
+        .wifi-layer {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
@@ -46,18 +46,21 @@
             stroke-linecap: butt; /* カクカク */
         }
 
-        /* 1. 下層：灰色のWi-Fi */
-        #wifi-gray { z-index: 1; }
+        /* 1. 下層：灰色のWi-Fi（背景） */
+        #wifi-bg { z-index: 1; }
         
-        /* 2. 上層：白いWi-Fi（ここを切り抜く） */
-        #wifi-white {
+        /* 2. 中層：白いWi-Fi（水位で隠す箱） */
+        #wifi-fill-container {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%;
+            height: 0%; /* ここを 0% 〜 100% に動かす */
+            overflow: hidden; /* 箱からはみ出た白Wi-Fiを隠す */
             z-index: 2;
-            /* 下から上にせり上がる水位で切り抜く */
-            clip-path: inset(100% 0 0 0); 
-            transition: clip-path 0.1s linear;
+            pointer-events: none;
         }
 
-        /* 3. 輪郭：黒い縁取り */
+        /* 3. 輪郭：黒い縁取り（一番上） */
         #wifi-outline { z-index: 3; pointer-events: none; }
 
         .plus-one {
@@ -82,22 +85,24 @@
         <div id="unit">Mbps</div>
     </div>
 
-    <div id="wifi-target">
-        <svg id="wifi-gray" class="wifi-svg-base" viewBox="0 0 24 24">
+    <div id="wifi-wrapper">
+        <svg class="wifi-layer" id="wifi-bg" viewBox="0 0 24 24">
             <circle cx="12" cy="18" r="2.2" fill="#444444" />
             <path class="wifi-path" d="M8.5 14a6 6 0 0 1 7 0" stroke="#444444" />
             <path class="wifi-path" d="M5 10.5a11 11 0 0 1 14 0" stroke="#444444" />
             <path class="wifi-path" d="M1.5 7a16 16 0 0 1 21 0" stroke="#444444" />
         </svg>
 
-        <svg id="wifi-white" class="wifi-svg-base" viewBox="0 0 24 24">
-            <circle cx="12" cy="18" r="2.2" fill="#FFFFFF" />
-            <path class="wifi-path" d="M8.5 14a6 6 0 0 1 7 0" stroke="#FFFFFF" />
-            <path class="wifi-path" d="M5 10.5a11 11 0 0 1 14 0" stroke="#FFFFFF" />
-            <path class="wifi-path" d="M1.5 7a16 16 0 0 1 21 0" stroke="#FFFFFF" />
-        </svg>
+        <div id="wifi-fill-container">
+            <svg style="width:75vmin; height:75vmin; position:absolute; bottom:0; left:0;" viewBox="0 0 24 24">
+                <circle cx="12" cy="18" r="2.2" fill="#FFFFFF" />
+                <path class="wifi-path" d="M8.5 14a6 6 0 0 1 7 0" stroke="#FFFFFF" />
+                <path class="wifi-path" d="M5 10.5a11 11 0 0 1 14 0" stroke="#FFFFFF" />
+                <path class="wifi-path" d="M1.5 7a16 16 0 0 1 21 0" stroke="#FFFFFF" />
+            </svg>
+        </div>
 
-        <svg id="wifi-outline" class="wifi-svg-base" viewBox="0 0 24 24">
+        <svg class="wifi-layer" id="wifi-outline" viewBox="0 0 24 24">
             <circle cx="12" cy="18" r="2.2" fill="none" stroke="#000" stroke-width="0.3" />
             <path class="wifi-path" d="M8.5 14a6 6 0 0 1 7 0" stroke="#000" stroke-width="0.3" />
             <path class="wifi-path" d="M5 10.5a11 11 0 0 1 14 0" stroke="#000" stroke-width="0.3" />
@@ -114,22 +119,20 @@
         const scoreDisplay = document.getElementById('score-display');
         const levelDisplay = document.getElementById('level-display');
         const clearedDisplay = document.getElementById('cleared-count');
-        const wifiTarget = document.getElementById('wifi-target');
-        const wifiWhite = document.getElementById('wifi-white');
+        const wifiWrapper = document.getElementById('wifi-wrapper');
+        const wifiFillContainer = document.getElementById('wifi-fill-container');
 
         function handleAction(e) {
             e.preventDefault();
             score++;
             
-            // スコア更新
             scoreDisplay.innerText = score.toLocaleString();
             
-            // 水位更新（clip-pathのinsetを下から上に減らしていく）
+            // 水位の箱の高さを 0% 〜 100% で更新
+            // ※Wi-Fiアイコンは中央にあるので、実際は 10% 〜 90% くらいで全部染まります
             let progress = (score / targetScore) * 100;
-            let insetVal = 100 - progress;
-            wifiWhite.style.clipPath = `inset(${insetVal}% 0 0 0)`;
+            wifiFillContainer.style.height = `${progress}%`;
 
-            // 完走チェック
             if (score >= targetScore) {
                 completeLevel();
             } else {
@@ -152,9 +155,7 @@
 
             clearedDisplay.innerText = clearedCount;
             levelDisplay.innerText = `Lv.${level} Wi-Fi`;
-            
-            // リセット
-            wifiWhite.style.clipPath = `inset(100% 0 0 0)`;
+            wifiFillContainer.style.height = `0%`;
             scoreDisplay.innerText = "0";
         }
 
@@ -172,8 +173,8 @@
             ], { duration: 600, easing: 'ease-out' }).onfinish = () => el.remove();
         }
 
-        // Pointerdownに集約して二重クリックを防止
-        wifiTarget.addEventListener('pointerdown', handleAction, { passive: false });
+        wifiWrapper.addEventListener('pointerdown', handleAction, { passive: false });
     </script>
 </body>
 </html>
+
