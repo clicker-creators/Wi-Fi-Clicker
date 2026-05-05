@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SINGULARITY CLICKER</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle, #1a1a2e 0%, #000000 100%);
+            color: white;
+            height: 100dvh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none; /* テキスト選択を防ぐ */
+        }
+
+        /* 統計情報の表示 */
+        .stats {
+            text-align: center;
+            position: absolute;
+            top: 40px;
+            z-index: 100;
+        }
+
+        #density-display {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin: 0;
+            opacity: 0.8;
+        }
+
+        #mass-count {
+            font-size: 50px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin: 5px 0;
+        }
+
+        #gips-display {
+            font-size: 16px;
+            color: #a0aec0;
+        }
+
+        /* ブラックホール */
+        #blackhole-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* 中心部（闇） */
+        #blackhole-core {
+            width: 100px;
+            height: 100px;
+            background: black;
+            border-radius: 50%;
+            box-shadow: 0 0 40px 10px black;
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+
+        /* イベントホライズン（虹色の輪） */
+        #event-horizon {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            background: conic-gradient(from 180deg at 50% 50%, #ff0080, #ff8c00, #40e0d0, #ff0080);
+            border-radius: 50%;
+            filter: blur(10px);
+            animation: rotate 4s linear infinite;
+            opacity: 0.7;
+            z-index: 5;
+            transition: transform 0.1s, width 0.3s, height 0.3s;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* クリック時の反応 */
+        #blackhole-container:active #blackhole-core {
+            transform: scale(0.95);
+        }
+        #blackhole-container:active #event-horizon {
+            transform: scale(1.1) rotate(0deg); /* active時は回転アニメと競合するので、scaleのみ */
+        }
+
+        /* アップグレードショップ（今回は土台のみ） */
+        .shop {
+            position: absolute;
+            bottom: 40px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+            font-size: 14px;
+            color: #a0aec0;
+        }
+
+        /* 吸い込まれる塵のアニメーション */
+        .dust {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        @keyframes suck-in {
+            0% { transform: translate(var(--startX), var(--startY)); opacity: 1; scale: 1; }
+            100% { transform: translate(0, 0); opacity: 0; scale: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stats">
+        <p id="density-display">DENSITY</p>
+        <h1 id="mass-count">0</h1>
+        <div id="gips-display">毎秒の自然流入: 0</div>
+    </div>
+
+    <div id="blackhole-container">
+        <div id="blackhole-core"></div>
+        <div id="event-horizon"></div>
+    </div>
+
+    <div class="shop">
+        アップグレードはまだ未実装...<br>
+        自然に塵が流入するのを待つか、<br>
+        中心をクリックして吸い込め。
+    </div>
+
+    <script>
+        let mass = 0;
+        let baseSize = 100;
+        let gips = 0; // Gravitational Influx Per Second (毎秒の重力流入)
+
+        const container = document.getElementById('blackhole-container');
+        const core = document.getElementById('blackhole-core');
+        const horizon = document.getElementById('event-horizon');
+        const massCount = document.getElementById('mass-count');
+
+        // クリック処理
+        container.addEventListener('click', (e) => {
+            mass++;
+            // クリックした位置の周囲から塵を生成
+            for (let i = 0; i < 5; i++) {
+                showDust(e.clientX, e.clientY);
+            }
+            updateUI();
+        });
+
+        // 自動加算
+        setInterval(() => {
+            mass += gips / 10;
+            updateUI();
+        }, 100);
+
+        function updateUI() {
+            massCount.innerText = Math.floor(mass);
+            
+            // 密度に応じて巨大化させる
+            let scaleFactor = 1 + (Math.log10(mass + 1) * 0.1); // 対数を使って、最初は大きく、後はゆっくり成長
+            let newSize = baseSize * scaleFactor;
+            
+            // あまり大きくなりすぎないように制限
+            newSize = Math.min(newSize, 280);
+
+            core.style.width = newSize + 'px';
+            core.style.height = newSize + 'px';
+            horizon.style.width = (newSize + 10) + 'px';
+            horizon.style.height = (newSize + 10) + 'px';
+        }
+
+        // 塵が吸い込まれる演出
+        function showDust(clickX, clickY) {
+            const dust = document.createElement('div');
+            dust.className = 'dust';
+            
+            // コンテナの中心位置を取得
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            // コンテナの中心を(0,0)とした相対座標を計算
+            const relStartX = clickX - centerX;
+            const relStartY = clickY - centerY;
+
+            dust.style.setProperty('--startX', relStartX + 'px');
+            dust.style.setProperty('--startY', relStartY + 'px');
+            
+            // アニメーションを設定（塵ごとに少しランダム性を入れる）
+            const duration = 0.5 + Math.random() * 0.3;
+            dust.style.animation = `suck-in ${duration}s ease-in forwards`;
+            
+            // コンテナの中に塵を追加
+            container.appendChild(dust);
+            
+            // アニメーション終了後に削除
+            setTimeout(() => dust.remove(), duration * 1000);
+        }
+    </script>
+</body>
+</html>
+
