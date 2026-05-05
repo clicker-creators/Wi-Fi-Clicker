@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fi SIGNAL BOOSTER</title>
+    <title>Wi-Fiクリッカー - clicker-creators</title>
     <style>
         body {
             margin: 0;
@@ -11,164 +11,155 @@
             width: 100%;
             height: 100dvh;
             overflow: hidden;
-            /* 背景は水色 */
-            background-color: #87CEEB;
+            /* 深い青のグラデーション背景（Cookie Clicker風） */
+            background: radial-gradient(circle at center, #1a4a72 0%, #051622 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            /* クリック時の青いハイライトを消す */
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* スコア表示（邪魔にならないように上部に） */
-        #score-display {
+        /* スコア表示 */
+        #score-container {
             position: absolute;
-            top: 10dvh;
-            font-size: 32px;
-            color: white;
-            font-weight: bold;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            top: 12dvh;
+            text-align: center;
             z-index: 10;
         }
 
-        /* Wi-Fiアイコン（クリック対象） */
+        #score-display {
+            font-size: 48px;
+            color: white;
+            font-weight: 900;
+            text-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+
+        #unit {
+            font-size: 20px;
+            color: #87CEEB;
+            margin-left: 5px;
+        }
+
+        /* Wi-Fiアイコン */
         #wifi-container {
-            width: 60vmin; /* 画面の短い方の辺に合わせてサイズ調整（縦横対応） */
-            height: 60vmin;
+            width: 70vmin;
+            height: 70vmin;
             cursor: pointer;
             position: relative;
             z-index: 5;
+            transition: transform 0.05s active;
         }
 
-        /* SVGのスタイル */
+        #wifi-container:active {
+            transform: scale(0.95);
+        }
+
+        /* SVGのスタイル：黒い輪郭線を表現 */
         #wifi-svg {
             width: 100%;
             height: 100%;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
 
-        /* 弧の部分（初期状態は灰色） */
         .wifi-arc {
-            fill: #C0C0C0; /* 画像のような灰色 */
-            transition: fill 0.2s ease; /* 色が変わる時のアニメ */
+            fill: #444444; /* デフォルトの灰色 */
+            stroke: #000;  /* 黒の輪郭 */
+            stroke-width: 0.5px;
+            transition: fill 0.3s ease, filter 0.3s ease;
         }
 
-        /* 白く染まった状態のクラス */
+        /* 白く染まった状態（発光エフェクト） */
         .wifi-arc.active {
-            fill: white;
+            fill: #FFFFFF;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.8));
         }
 
-        /* 「+1」のポップアップテキスト */
+        /* ポップアップテキスト */
         .plus-one {
             position: absolute;
             color: white;
             font-weight: bold;
-            font-size: 24px;
+            font-size: 28px;
             pointer-events: none;
             z-index: 20;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
 
-    <div id="score-display">0</div>
+    <div id="score-container">
+        <div id="score-display">0</div>
+        <div id="unit">Mbps</div>
+    </div>
 
     <div id="wifi-container">
         <svg id="wifi-svg" viewBox="0 0 24 24">
-            <circle class="wifi-arc" id="arc-0" cx="12" cy="20" r="2"></circle>
-            <path class="wifi-arc" id="arc-1" d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-            <path class="wifi-arc" id="arc-2" d="M5 12.55a11 11 0 0 1 14.08 0"></path>
-            <path class="wifi-arc" id="arc-3" d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <circle class="wifi-arc" id="arc-point" cx="12" cy="18" r="2"></circle>
+            <path class="wifi-arc" id="arc-low" d="M8.53 14.11a6 6 0 0 1 6.95 0"></path>
+            <path class="wifi-arc" id="arc-mid" d="M5 10.55a11 11 0 0 1 14.08 0"></path>
+            <path class="wifi-arc" id="arc-high" d="M1.42 7a16 16 0 0 1 21.16 0"></path>
         </svg>
     </div>
 
     <script>
         let score = 0;
-        let lastClickTime = 0; // クリック2回問題を解決するための変数
-        
-        const wifiContainer = document.getElementById('wifi-container');
         const scoreDisplay = document.getElementById('score-display');
-        const arcs = document.querySelectorAll('.wifi-arc');
+        const wifiContainer = document.getElementById('wifi-container');
 
-        // クリックとタッチ、両方に対応するための統合関数
-        function handleBoost(e) {
-            // 2回クリック問題対策：前回のクリックから30ミリ秒以内なら無視する
-            const now = Date.now();
-            if (now - lastClickTime < 30) return;
-            lastClickTime = now;
+        const arcPoint = document.getElementById('arc-point');
+        const arcLow = document.getElementById('arc-low');
+        const arcMid = document.getElementById('arc-mid');
+        const arcHigh = document.getElementById('arc-high');
 
+        // 二重クリック防止用の統合ハンドラ（pointerdownはiOS/Android/PC全てで動作）
+        function handleAction(e) {
+            e.preventDefault();
+            
             score++;
             scoreDisplay.innerText = score.toLocaleString();
 
-            // 1. 下から順に白く埋める演出
-            // 4回クリック（スコアが4の倍数）ごとに全点灯→リセットを繰り返す
-            const currentLevel = (score - 1) % 5; // 0, 1, 2, 3, 4(リセット)
+            // 目標値に応じた色の変化
+            if (score >= 100) arcPoint.classList.add('active');
+            if (score >= 300) arcLow.classList.add('active');
+            if (score >= 800) arcMid.classList.add('active');
+            if (score >= 3000) arcHigh.classList.add('active');
 
-            if (currentLevel < 4) {
-                // 下から順に白く（activeクラスを追加）
-                for (let i = 0; i <= currentLevel; i++) {
-                    arcs[i].classList.add('active');
-                }
-            } else {
-                // 4回目で一旦全点灯してからリセット（灰色に戻す）
-                arcs.forEach(arc => arc.classList.add('active'));
-                setTimeout(() => {
-                    arcs.forEach(arc => arc.classList.remove('active'));
-                }, 150); // 一瞬だけ白く光らせる
-            }
-
-            // 2. 「+1」ポップアップの生成
-            // イベントの種類によって座標の取り方を変える
-            let clickX, clickY;
-            if (e.type === 'touchstart') {
-                clickX = e.touches[0].clientX;
-                clickY = e.touches[0].clientY;
-            } else {
-                clickX = e.clientX;
-                clickY = e.clientY;
-            }
-            createPlusOne(clickX, clickY);
+            // エフェクト座標取得
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            if (x && y) createPlusOne(x, y);
         }
 
-        // --- 「+1」のふわっと消えるアニメーション ---
         function createPlusOne(x, y) {
             const el = document.createElement('div');
             el.className = 'plus-one';
             el.innerText = '+1';
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
             document.body.appendChild(el);
 
-            // Web Animations API で 0.6秒(600ms)のアニメを設定
             el.animate([
-                { 
-                    transform: 'translate(-50%, -50%)', 
-                    opacity: 1 
-                },
-                { 
-                    transform: 'translate(-50%, -100px)', // 上にふわっと移動
-                    opacity: 0 
-                }
+                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                { transform: 'translate(-50%, -120px) scale(1.2)', opacity: 0 }
             ], {
-                duration: 600, // 0.6秒
+                duration: 600,
                 easing: 'ease-out'
-            }).onfinish = () => el.remove(); // アニメ終わったら要素を削除
+            }).onfinish = () => el.remove();
         }
 
-        // スマホのダブルタップズームを完全に防止
+        // pointerdownイベントに集約することで二重入力を防ぐ
+        wifiContainer.addEventListener('pointerdown', handleAction, { passive: false });
+
+        // ダブルタップでズームされるのを防止
         document.addEventListener('touchstart', (e) => {
             if (e.touches.length > 1) e.preventDefault();
         }, { passive: false });
-
-        // イベントリスナーの登録（タッチとクリック）
-        wifiContainer.addEventListener('touchstart', handleBoost, { passive: false });
-        wifiContainer.addEventListener('click', handleBoost);
-
     </script>
 </body>
 </html>
-
