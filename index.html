@@ -11,63 +11,59 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
-            touch-action: none;
+            touch-action: none; color: white;
         }
 
-        #collection-counter {
-            position: absolute; top: 20px; right: 20px; color: white;
-            font-size: 20px; font-weight: bold; background: rgba(255,255,255,0.1);
-            padding: 5px 15px; border-radius: 20px; z-index: 100;
-        }
+        #top-ui { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; z-index: 100; }
+        .ui-pill { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 16px; }
 
-        #score-container { position: absolute; top: 10dvh; text-align: center; z-index: 10; pointer-events: none; }
-        #score-display { font-size: 56px; color: white; font-weight: 900; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
-        #unit { font-size: 24px; color: #87CEEB; margin-top: -5px; }
-        #level-display { color: #87CEEB; font-weight: bold; letter-spacing: 2px; }
+        #score-container { position: absolute; top: 12dvh; text-align: center; z-index: 10; pointer-events: none; }
+        #score-display { font-size: 56px; font-weight: 900; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
+        #auto-mps-display { font-size: 18px; color: #87CEEB; }
 
-        #wifi-wrapper {
-            width: 80vmin; height: 80vmin;
-            position: relative;
-            cursor: pointer;
-            z-index: 5;
-        }
+        #wifi-wrapper { width: 70vmin; height: 70vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -5dvh; }
 
-        .wifi-layer {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+        /* ショップ：予算不足だと暗くなる */
+        #shop-container {
+            position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85);
+            border-top: 2px solid #87CEEB; padding: 10px 0; max-height: 38dvh; overflow-y: auto; z-index: 150;
         }
-
-        .wifi-path {
-            fill: none;
-            stroke-width: 2.2px;
-            stroke-linecap: butt; /* カクカク */
+        .shop-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: background 0.2s;
         }
+        .shop-item:active { background: rgba(135, 206, 235, 0.2); }
+        .shop-item.disabled { opacity: 0.3; filter: grayscale(1); }
+        
+        .item-info { display: flex; flex-direction: column; }
+        .item-name { font-weight: bold; font-size: 16px; }
+        .item-cost { font-size: 14px; color: #ffcc00; font-family: monospace; }
+        .item-count { font-size: 24px; font-weight: 900; color: rgba(255,255,255,0.2); }
 
         .plus-one {
             position: absolute; color: white; font-weight: bold; font-size: 32px;
             pointer-events: none; z-index: 20; text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
-
-        @keyframes flashEffect {
-            0% { background-color: white; opacity: 0.8; }
-            100% { background-color: transparent; opacity: 0; }
-        }
+        
+        @keyframes flashEffect { 0% { background-color: white; opacity: 0.8; } 100% { background-color: transparent; opacity: 0; } }
         .clear-flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
     </style>
 </head>
 <body>
 
-    <div id="collection-counter">📡 × <span id="cleared-count">0</span></div>
+    <div id="top-ui">
+        <div class="ui-pill" id="level-display">Lv.1 Wi-Fi</div>
+        <div class="ui-pill">📡 × <span id="cleared-count">0</span></div>
+    </div>
 
     <div id="score-container">
-        <div id="level-display">Lv.1 Wi-Fi</div>
         <div id="score-display">0</div>
-        <div id="unit">Mbps</div>
+        <div id="auto-mps-display">0 Mbps/s</div>
     </div>
 
     <div id="wifi-wrapper">
-        <svg id="wifi-svg" style="width:100%; height:100%; position:absolute; top:0; left:0;" viewBox="0 0 24 24">
+        <svg id="wifi-svg" style="width:100%; height:100%;" viewBox="0 0 24 24">
             <defs>
                 <filter id="outline-filter">
                     <feMorphology operator="dilate" radius="0.3" in="SourceGraphic" result="dilated"/>
@@ -75,28 +71,52 @@
                     <feComposite in="black" in2="dilated" operator="in" result="outline"/>
                     <feComposite in="SourceGraphic" in2="outline" operator="over"/>
                 </filter>
-                
                 <clipPath id="water-clip">
                     <rect id="water-rect" x="0" y="21" width="24" height="24" />
                 </clipPath>
             </defs>
-            
             <g filter="url(#outline-filter)">
                 <g stroke="#444444" fill="none" stroke-width="2.2" stroke-linecap="butt">
                     <circle cx="12" cy="18" r="2.2" fill="#444444" stroke="none" />
-                    <path d="M8.5 14a6 6 0 0 1 7 0" />
-                    <path d="M5 10.5a11 11 0 0 1 14 0" />
-                    <path d="M1.5 7a16 16 0 0 1 21 0" />
+                    <path d="M8.5 14a6 6 0 0 1 7 0" /><path d="M5 10.5a11 11 0 0 1 14 0" /><path d="M1.5 7a16 16 0 0 1 21 0" />
                 </g>
-
                 <g clip-path="url(#water-clip)" stroke="#FFFFFF" fill="none" stroke-width="2.2" stroke-linecap="butt">
                     <circle cx="12" cy="18" r="2.2" fill="#FFFFFF" stroke="none" />
-                    <path d="M8.5 14a6 6 0 0 1 7 0" stroke="#FFFFFF" />
-                    <path d="M5 10.5a11 11 0 0 1 14 0" stroke="#FFFFFF" />
-                    <path d="M1.5 7a16 16 0 0 1 21 0" stroke="#FFFFFF" />
+                    <path d="M8.5 14a6 6 0 0 1 7 0" /><path d="M5 10.5a11 11 0 0 1 14 0" /><path d="M1.5 7a16 16 0 0 1 21 0" />
                 </g>
             </g>
         </svg>
+    </div>
+
+    <div id="shop-container">
+        <div class="shop-item" onclick="buyItem(0)">
+            <div class="item-info">
+                <span class="item-name">中古ルーター (+1/s)</span>
+                <span class="item-cost" id="cost-0">Cost: 15</span>
+            </div>
+            <div class="item-count" id="count-0">0</div>
+        </div>
+        <div class="shop-item" onclick="buyItem(1)">
+            <div class="item-info">
+                <span class="item-name">中継機 (+8/s)</span>
+                <span class="item-cost" id="cost-1">Cost: 150</span>
+            </div>
+            <div class="item-count" id="count-1">0</div>
+        </div>
+        <div class="shop-item" onclick="buyItem(2)">
+            <div class="item-info">
+                <span class="item-name">光回線契約 (+45/s)</span>
+                <span class="item-cost" id="cost-2">Cost: 1200</span>
+            </div>
+            <div class="item-count" id="count-2">0</div>
+        </div>
+        <div class="shop-item" onclick="buyItem(3)">
+            <div class="item-info">
+                <span class="item-name">業務用基地局 (+210/s)</span>
+                <span class="item-cost" id="cost-3">Cost: 8500</span>
+            </div>
+            <div class="item-count" id="count-3">0</div>
+        </div>
     </div>
 
     <script>
@@ -105,26 +125,21 @@
         let level = 1;
         const targetScore = 3000;
 
-        const scoreDisplay = document.getElementById('score-display');
-        const levelDisplay = document.getElementById('level-display');
-        const clearedDisplay = document.getElementById('cleared-count');
-        const wifiWrapper = document.getElementById('wifi-wrapper');
-        const waterRect = document.getElementById('water-rect');
+        const items = [
+            { name: "中古ルーター", cost: 15, mps: 1, count: 0 },
+            { name: "中継機", cost: 150, mps: 8, count: 0 },
+            { name: "光回線契約", cost: 1200, mps: 45, count: 0 },
+            { name: "業務用基地局", cost: 8500, mps: 210, count: 0 }
+        ];
 
-        // Y座標の基準点 (SVG座標 0〜24。数字が小さいほど上)
-        // 各パーツの上端Y座標を精密に計算
-        const Y_START = 21;    // スタート（丸の下）
-        const Y1 = 15.8;     // Mbps 100 (丸の上端)
-        const Y2 = 12.87;    // Mbps 500 (二番目の線の上端)
-        const Y3 = 7.98;     // Mbps 1000 (三番目の線の上端)
-        const Y4 = 3.07;     // Mbps 3000 (一番上の線の上端)
+        const scoreDisplay = document.getElementById('score-display');
+        const autoMpsDisplay = document.getElementById('auto-mps-display');
+        const waterRect = document.getElementById('water-rect');
 
         function handleAction(e) {
             if (e.cancelable) e.preventDefault();
-            
             score++;
             updateUI();
-
             if (score >= targetScore) {
                 completeLevel();
             } else {
@@ -134,74 +149,91 @@
             }
         }
 
-        function updateUI() {
-            scoreDisplay.innerText = score.toLocaleString();
-            
-            // 非線形水位制御：スコアに応じて、Y座標を各目標点に向かって減らす
-            let currentY;
-
-            if (score <= 100) {
-                // 0 -> 100 Mbps: START -> Y1
-                let progress = score / 100;
-                currentY = Y_START - ((Y_START - Y1) * progress);
-            } else if (score <= 500) {
-                // 100 -> 500 Mbps: Y1 -> Y2
-                let progress = (score - 100) / (500 - 100);
-                currentY = Y1 - ((Y1 - Y2) * progress);
-            } else if (score <= 1000) {
-                // 500 -> 1000 Mbps: Y2 -> Y3
-                let progress = (score - 500) / (1000 - 500);
-                currentY = Y2 - ((Y2 - Y3) * progress);
-            } else if (score <= 3000) {
-                // 1000 -> 3000 Mbps: Y3 -> Y4
-                let progress = (score - 1000) / (3000 - 1000);
-                currentY = Y3 - ((Y3 - Y4) * progress);
-            } else {
-                // 3000 Mbps以上: Y4 (全埋まり)
-                currentY = Y4;
+        function buyItem(id) {
+            if (score >= items[id].cost) {
+                // Mbpsを実際に消費する
+                score -= items[id].cost;
+                items[id].count++;
+                // 価格を1.15倍にする
+                items[id].cost = Math.floor(items[id].cost * 1.2);
+                updateUI();
             }
+        }
 
-            // クリップパスの四角形のY座標を更新して水位を表現
+        function updateUI() {
+            // スコアがマイナスにならないようにガード
+            if (score < 0) score = 0;
+            
+            scoreDisplay.innerText = Math.floor(score).toLocaleString();
+            
+            // 水位の計算ロジック（Mbpsと完全連動）
+            const Y_START = 21, Y1 = 15.8, Y2 = 12.87, Y3 = 7.98, Y4 = 3.07;
+            let currentY;
+            if (score <= 100) currentY = Y_START - ((Y_START - Y1) * (score / 100));
+            else if (score <= 500) currentY = Y1 - ((Y1 - Y2) * ((score - 100) / 400));
+            else if (score <= 1000) currentY = Y2 - ((Y2 - Y3) * ((score - 500) / 500));
+            else if (score <= 3000) currentY = Y3 - ((Y3 - Y4) * ((score - 1000) / 2000));
+            else currentY = Y4;
+            
+            // 水位を滑らかに動かすためにtransitionはCSS側ではなくJSで直接指定
             waterRect.setAttribute('y', currentY);
+
+            // 自動加算の表示更新
+            let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
+            autoMpsDisplay.innerText = `${totalMps} Mbps/s`;
+            
+            updateShopUI();
+        }
+
+        function updateShopUI() {
+            items.forEach((item, i) => {
+                const costEl = document.getElementById(`cost-${i}`);
+                const countEl = document.getElementById(`count-${i}`);
+                const itemEl = document.getElementsByClassName('shop-item')[i];
+                
+                costEl.innerText = `Cost: ${item.cost}`;
+                countEl.innerText = item.count;
+                
+                // 予算（今のMbps）が足りなければ買えないように
+                if (score < item.cost) itemEl.classList.add('disabled');
+                else itemEl.classList.remove('disabled');
+            });
         }
 
         function completeLevel() {
-            clearedCount++;
-            level++;
-            score = 0;
-
+            clearedCount++; level++; score = 0;
             const f = document.createElement('div');
             f.className = 'clear-flash';
             f.style.animation = 'flashEffect 0.5s ease-out';
             document.body.appendChild(f);
             setTimeout(() => f.remove(), 500);
-
-            clearedDisplay.innerText = clearedCount;
-            levelDisplay.innerText = `Lv.${level} Wi-Fi`;
+            document.getElementById('cleared-count').innerText = clearedCount;
+            document.getElementById('level-display').innerText = `Lv.${level} Wi-Fi`;
             updateUI();
         }
 
+        // 自動生産タイマー (0.1秒ごとに加算)
+        setInterval(() => {
+            let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
+            if (totalMps > 0) {
+                score += (totalMps / 10);
+                updateUI();
+                if (score >= targetScore) completeLevel();
+            }
+        }, 100);
+
         function createPlusOne(x, y) {
             const el = document.createElement('div');
-            el.className = 'plus-one';
-            el.innerText = '+1';
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
+            el.className = 'plus-one'; el.innerText = '+1';
+            el.style.left = `${x}px`; el.style.top = `${y}px`;
             el.style.transform = 'translate(-50%, -50%)';
             document.body.appendChild(el);
-
-            el.animate([
-                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-                { transform: 'translate(-50%, -150px) scale(1.5)', opacity: 0 }
-            ], { duration: 600, easing: 'ease-out' }).onfinish = () => el.remove();
+            el.animate([{ transform: 'translate(-50%, -50%)', opacity: 1 }, { transform: 'translate(-50%, -150px)', opacity: 0 }], { duration: 600 }).onfinish = () => el.remove();
         }
 
-        wifiWrapper.addEventListener('touchstart', handleAction, { passive: false });
-        wifiWrapper.addEventListener('mousedown', (e) => {
-            if (window.ontouchstart === undefined) {
-                handleAction(e);
-            }
-        });
+        const wrapper = document.getElementById('wifi-wrapper');
+        wrapper.addEventListener('touchstart', handleAction, { passive: false });
+        wrapper.addEventListener('mousedown', (e) => { if (window.ontouchstart === undefined) handleAction(e); });
     </script>
 </body>
 </html>
