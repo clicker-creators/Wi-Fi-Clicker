@@ -2,142 +2,172 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>THE VOID - SCORE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wi-Fi SIGNAL BOOSTER</title>
     <style>
-        body, html {
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%;
+            height: 100dvh;
             overflow: hidden;
-            background: radial-gradient(circle, #004d61 0%, #001a22 100%);
+            /* 背景は水色 */
+            background-color: #87CEEB;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            font-family: 'Arial', sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none;
+            /* クリック時の青いハイライトを消す */
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* 右上のスコア表示 */
-        #score-container {
+        /* スコア表示（邪魔にならないように上部に） */
+        #score-display {
             position: absolute;
-            top: 20px;
-            right: 30px;
-            color: rgba(255, 255, 255, 0.8);
-            font-family: 'Inter', 'Arial', sans-serif;
-            font-size: 24px;
-            font-weight: 200;
-            letter-spacing: 4px;
-            z-index: 100;
+            top: 10dvh;
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
         }
 
-        /* ブラックホール本体 */
-        #blackhole {
-            width: 150px;
-            height: 150px;
-            background: #000;
-            border-radius: 50%;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.1);
+        /* Wi-Fiアイコン（クリック対象） */
+        #wifi-container {
+            width: 60vmin; /* 画面の短い方の辺に合わせてサイズ調整（縦横対応） */
+            height: 60vmin;
+            cursor: pointer;
             position: relative;
-            z-index: 2;
-            transition: transform 0.05s linear;
+            z-index: 5;
         }
 
-        /* 吸い込まれるエフェクト文字 */
+        /* SVGのスタイル */
+        #wifi-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 弧の部分（初期状態は灰色） */
+        .wifi-arc {
+            fill: #C0C0C0; /* 画像のような灰色 */
+            transition: fill 0.2s ease; /* 色が変わる時のアニメ */
+        }
+
+        /* 白く染まった状態のクラス */
+        .wifi-arc.active {
+            fill: white;
+        }
+
+        /* 「+1」のポップアップテキスト */
         .plus-one {
             position: absolute;
             color: white;
-            font-family: 'Arial', sans-serif;
             font-weight: bold;
-            font-size: 20px;
+            font-size: 24px;
             pointer-events: none;
-            z-index: 3;
-        }
-
-        /* 縦向き時の警告 */
-        @media screen and (orientation: portrait) {
-            body::after {
-                content: "Please rotate your device to landscape";
-                position: fixed;
-                inset: 0;
-                background: #001a22;
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 999;
-                font-family: sans-serif;
-            }
+            z-index: 20;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
     </style>
 </head>
-<body onclick="absorb(event)" ontouchstart="absorb(event)">
+<body>
 
-    <div id="score-container">0</div>
-    <div id="blackhole"></div>
+    <div id="score-display">0</div>
+
+    <div id="wifi-container">
+        <svg id="wifi-svg" viewBox="0 0 24 24">
+            <circle class="wifi-arc" id="arc-0" cx="12" cy="20" r="2"></circle>
+            <path class="wifi-arc" id="arc-1" d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <path class="wifi-arc" id="arc-2" d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path class="wifi-arc" id="arc-3" d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+        </svg>
+    </div>
 
     <script>
         let score = 0;
-        let currentScale = 1;
+        let lastClickTime = 0; // クリック2回問題を解決するための変数
         
-        // --- ここで巨大化のスピードを調整できます ---
-        // 1.001     : 結構すぐ大きくなる
-        // 1.0001    : じわじわ大きくなる
-        // 1.0000001 : ほぼ変わらない（修行レベル）
-        const growthRate = 1.0001; 
-        
-        const blackhole = document.getElementById('blackhole');
-        const scoreDisplay = document.getElementById('score-container');
+        const wifiContainer = document.getElementById('wifi-container');
+        const scoreDisplay = document.getElementById('score-display');
+        const arcs = document.querySelectorAll('.wifi-arc');
 
-        function absorb(e) {
-            const x = e.clientX || (e.touches && e.touches[0].clientX);
-            const y = e.clientY || (e.touches && e.touches[0].clientY);
-            
-            if (!x || !y) return;
+        // クリックとタッチ、両方に対応するための統合関数
+        function handleBoost(e) {
+            // 2回クリック問題対策：前回のクリックから30ミリ秒以内なら無視する
+            const now = Date.now();
+            if (now - lastClickTime < 30) return;
+            lastClickTime = now;
 
-            // スコア更新
             score++;
             scoreDisplay.innerText = score.toLocaleString();
 
-            // 巨大化
-            currentScale *= growthRate;
-            // あまりにも大きくなりすぎて画面を突き抜けないためのストッパー（任意）
-            if (currentScale < 10) {
-                blackhole.style.transform = `scale(${currentScale})`;
+            // 1. 下から順に白く埋める演出
+            // 4回クリック（スコアが4の倍数）ごとに全点灯→リセットを繰り返す
+            const currentLevel = (score - 1) % 5; // 0, 1, 2, 3, 4(リセット)
+
+            if (currentLevel < 4) {
+                // 下から順に白く（activeクラスを追加）
+                for (let i = 0; i <= currentLevel; i++) {
+                    arcs[i].classList.add('active');
+                }
+            } else {
+                // 4回目で一旦全点灯してからリセット（灰色に戻す）
+                arcs.forEach(arc => arc.classList.add('active'));
+                setTimeout(() => {
+                    arcs.forEach(arc => arc.classList.remove('active'));
+                }, 150); // 一瞬だけ白く光らせる
             }
 
-            createPlusOne(x, y);
+            // 2. 「+1」ポップアップの生成
+            // イベントの種類によって座標の取り方を変える
+            let clickX, clickY;
+            if (e.type === 'touchstart') {
+                clickX = e.touches[0].clientX;
+                clickY = e.touches[0].clientY;
+            } else {
+                clickX = e.clientX;
+                clickY = e.clientY;
+            }
+            createPlusOne(clickX, clickY);
         }
 
-        function createPlusOne(startX, startY) {
+        // --- 「+1」のふわっと消えるアニメーション ---
+        function createPlusOne(x, y) {
             const el = document.createElement('div');
             el.className = 'plus-one';
             el.innerText = '+1';
-            el.style.left = startX + 'px';
-            el.style.top = startY + 'px';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
             document.body.appendChild(el);
 
-            const bhRect = blackhole.getBoundingClientRect();
-            const centerX = bhRect.left + bhRect.width / 2;
-            const centerY = bhRect.top + bhRect.height / 2;
-
-            const animation = el.animate([
-                { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-                { transform: `translate(${centerX - startX}px, ${centerY - startY}px) scale(0)`, opacity: 0 }
+            // Web Animations API で 0.6秒(600ms)のアニメを設定
+            el.animate([
+                { 
+                    transform: 'translate(-50%, -50%)', 
+                    opacity: 1 
+                },
+                { 
+                    transform: 'translate(-50%, -100px)', // 上にふわっと移動
+                    opacity: 0 
+                }
             ], {
-                duration: 500,
-                easing: 'ease-in'
-            });
-
-            animation.onfinish = () => el.remove();
+                duration: 600, // 0.6秒
+                easing: 'ease-out'
+            }).onfinish = () => el.remove(); // アニメ終わったら要素を削除
         }
 
-        // ダブルタップズーム防止
+        // スマホのダブルタップズームを完全に防止
         document.addEventListener('touchstart', (e) => {
             if (e.touches.length > 1) e.preventDefault();
         }, { passive: false });
+
+        // イベントリスナーの登録（タッチとクリック）
+        wifiContainer.addEventListener('touchstart', handleBoost, { passive: false });
+        wifiContainer.addEventListener('click', handleBoost);
+
     </script>
 </body>
 </html>
