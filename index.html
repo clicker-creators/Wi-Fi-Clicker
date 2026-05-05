@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fiクリッカー - Clicker Creators</title>
+    <title>Wi-Fiクリッカー - clicker-creators</title>
     <style>
         body {
             margin: 0; padding: 0; width: 100%; height: 100dvh; overflow: hidden;
@@ -32,23 +32,14 @@
 
         #wifi-svg { width: 100%; height: 100%; filter: drop-shadow(0 0 15px rgba(0,0,0,0.6)); }
 
-        .wifi-arc {
+        /* Wi-Fiの共通形状（カクカク） */
+        .wifi-shape {
             stroke-width: 2px;
-            stroke-linecap: butt; /* カクカク */
-            fill: none;
-            stroke: #000;
-        }
-
-        /* 実際に色が変わる層 */
-        .wifi-fill {
-            stroke-width: 1.8px;
             stroke-linecap: butt;
             fill: none;
-            transition: stroke 0.05s linear;
         }
 
-        #arc-point { fill: #000; stroke: none; transition: fill 0.2s; }
-
+        /* ポップアップテキスト */
         .plus-one {
             position: absolute; color: white; font-weight: bold; font-size: 32px;
             pointer-events: none; z-index: 20; text-shadow: 0 2px 10px rgba(0,0,0,0.5);
@@ -74,20 +65,31 @@
     <div id="wifi-container">
         <svg id="wifi-svg" viewBox="0 0 24 24">
             <defs>
-                <linearGradient id="wifi-fill-grad" x1="0%" y1="100%" x2="0%" y2="0%">
-                    <stop id="stop-white" offset="0%" stop-color="#FFFFFF" />
-                    <stop id="stop-gray" offset="0%" stop-color="#444444" />
-                </linearGradient>
+                <mask id="water-mask">
+                    <rect id="mask-rect" x="0" y="24" width="24" height="24" fill="white" />
+                </mask>
             </defs>
             
-            <circle id="arc-point" cx="12" cy="18" r="2.2"></circle>
-            <path class="wifi-arc" d="M8.5 14a6 6 0 0 1 7 0"></path>
-            <path class="wifi-arc" d="M5 10.5a11 11 0 0 1 14 0"></path>
-            <path class="wifi-arc" d="M1.5 7a16 16 0 0 1 21 0"></path>
+            <g stroke="#444444">
+                <circle cx="12" cy="18" r="2.2" fill="#444444" stroke="none" />
+                <path class="wifi-shape" d="M8.5 14a6 6 0 0 1 7 0" />
+                <path class="wifi-shape" d="M5 10.5a11 11 0 0 1 14 0" />
+                <path class="wifi-shape" d="M1.5 7a16 16 0 0 1 21 0" />
+            </g>
 
-            <path class="wifi-fill" d="M8.5 14a6 6 0 0 1 7 0" stroke="url(#wifi-fill-grad)"></path>
-            <path class="wifi-fill" d="M5 10.5a11 11 0 0 1 14 0" stroke="url(#wifi-fill-grad)"></path>
-            <path class="wifi-fill" d="M1.5 7a16 16 0 0 1 21 0" stroke="url(#wifi-fill-grad)"></path>
+            <g stroke="#FFFFFF" mask="url(#water-mask)">
+                <circle id="white-point" cx="12" cy="18" r="2.2" fill="#FFFFFF" stroke="none" />
+                <path class="wifi-shape" d="M8.5 14a6 6 0 0 1 7 0" />
+                <path class="wifi-shape" d="M5 10.5a11 11 0 0 1 14 0" />
+                <path class="wifi-shape" d="M1.5 7a16 16 0 0 1 21 0" />
+            </g>
+
+            <g stroke="#000000" fill="none" style="stroke-width: 0.5px;">
+                <circle cx="12" cy="18" r="2.2" />
+                <path d="M8.5 14a6 6 0 0 1 7 0" />
+                <path d="M5 10.5a11 11 0 0 1 14 0" />
+                <path d="M1.5 7a16 16 0 0 1 21 0" />
+            </g>
         </svg>
     </div>
 
@@ -101,9 +103,7 @@
         const levelDisplay = document.getElementById('level-display');
         const clearedDisplay = document.getElementById('cleared-count');
         const wifiContainer = document.getElementById('wifi-container');
-        const stopWhite = document.getElementById('stop-white');
-        const stopGray = document.getElementById('stop-gray');
-        const arcPoint = document.getElementById('arc-point');
+        const maskRect = document.getElementById('mask-rect');
 
         function handleAction(e) {
             if (e.cancelable) e.preventDefault();
@@ -122,18 +122,14 @@
 
         function updateDisplay() {
             scoreDisplay.innerText = score.toLocaleString();
-            let progress = (score / targetScore) * 100;
             
-            // グラデーションの境界を完全に一致させて「水位」を表現
-            stopWhite.setAttribute('offset', `${progress}%`);
-            stopGray.setAttribute('offset', `${progress}%`);
-
-            // 点の着色ロジック
-            if (score >= 100) {
-                arcPoint.style.fill = '#FFFFFF';
-            } else {
-                arcPoint.style.fill = '#000000';
-            }
+            // 進捗 (0〜1)
+            let progress = score / targetScore;
+            
+            // マスクの y 座標を 24（下端）から 0（上端）へ動かす
+            // yを減らすことで、四角形が上にせり上がる
+            let maskY = 24 - (24 * progress);
+            maskRect.setAttribute('y', maskY);
         }
 
         function completeLevel() {
@@ -166,7 +162,6 @@
             ], { duration: 600, easing: 'ease-out' }).onfinish = () => el.remove();
         }
 
-        // Pointerdown を使いつつ、念のため二重実行されないよう管理
         wifiContainer.addEventListener('pointerdown', handleAction, { passive: false });
     </script>
 </body>
