@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fiクリッカー - Clicker Creators</title>
+    <title>Wi-Fi Clicker - Clicker Creators</title>
     <style>
         body {
             margin: 0; padding: 0; width: 100%; height: 100dvh; overflow: hidden;
@@ -22,28 +22,22 @@
         #target-display { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
         #auto-mps-display { font-size: 18px; color: #87CEEB; }
 
-        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; }
+        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; transition: transform 0.1s; }
+        /* 満タン時の震え演出 */
+        .shake { animation: shake 0.3s infinite; }
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px,2px); } 50% { transform: translate(-2px,1px); } 75% { transform: translate(1px,-2px); } 100% { transform: translate(0,0); } }
 
         #shop-container {
             position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85);
             border-top: 2px solid #87CEEB; padding: 10px 0; max-height: 38dvh; overflow-y: auto; z-index: 150;
         }
-        .shop-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .shop-item:active { background: rgba(135, 206, 235, 0.2); }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .shop-item.disabled { opacity: 0.3; filter: grayscale(1); }
-        .item-info { display: flex; flex-direction: column; }
         .item-name { font-weight: bold; font-size: 15px; }
         .item-cost { font-size: 13px; color: #ffcc00; }
         .item-count { font-size: 20px; font-weight: 900; color: rgba(255,255,255,0.2); }
 
-        .plus-one {
-            position: absolute; color: white; font-weight: bold; font-size: 28px;
-            pointer-events: none; z-index: 20; text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-        
+        .plus-one { position: absolute; color: white; font-weight: bold; font-size: 28px; pointer-events: none; z-index: 20; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
         @keyframes flashEffect { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
         .clear-flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; pointer-events: none; z-index: 200; opacity: 0; }
     </style>
@@ -62,7 +56,7 @@
     </div>
 
     <div id="wifi-wrapper">
-        <svg style="width:100%; height:100%;" viewBox="0 0 24 24">
+        <svg id="wifi-svg" style="width:100%; height:100%;" viewBox="0 0 24 24">
             <defs>
                 <filter id="outline-filter">
                     <feMorphology operator="dilate" radius="0.3" in="SourceGraphic" result="dilated"/>
@@ -110,7 +104,7 @@
         let score = 0;
         let clearedCount = 0;
         let level = 1;
-        let targetScore = 3000; // 初期値
+        let targetScore = 3000;
         let isLevelingUp = false;
 
         const items = [
@@ -121,11 +115,8 @@
         function handleAction(e) {
             if (isLevelingUp) return;
             if (e.cancelable) e.preventDefault();
-            
-            // 自分のタップパワーも、レベルに応じて少しだけ上げる（バランス調整）
             let clickPower = 1 + Math.floor(level * 0.5);
             score += clickPower;
-            
             updateUI();
             if (score >= targetScore) completeLevel();
             else {
@@ -151,16 +142,22 @@
             
             const Y_START = 21, Y1 = 15.8, Y2 = 12.87, Y3 = 7.98, Y4 = 3.07;
             let currentY;
-            // 目標値(targetScore)を基準に各パーツの閾値を計算
-            let p1 = targetScore * 0.033; // 約100/3000
-            let p2 = targetScore * 0.166; // 約500/3000
-            let p3 = targetScore * 0.333; // 約1000/3000
 
-            if (score <= p1) currentY = Y_START - ((Y_START - Y1) * (score / p1));
-            else if (score <= p2) currentY = Y1 - ((Y1 - Y2) * ((score - p1) / (p2 - p1)));
-            else if (score <= p3) currentY = Y2 - ((Y2 - Y3) * ((score - p2) / (p3 - p2)));
-            else if (score <= targetScore) currentY = Y3 - ((Y3 - Y4) * ((score - p3) / (targetScore - p3)));
-            else currentY = Y4;
+            // ★ 修正ロジック：しきい値を固定せず、targetScoreに対する割合で計算
+            const p1 = targetScore * (100 / 3000); 
+            const p2 = targetScore * (500 / 3000);
+            const p3 = targetScore * (1000 / 3000);
+
+            if (score >= targetScore) {
+                currentY = Y4; // 強制的に全埋まり
+                document.getElementById('wifi-wrapper').classList.add('shake');
+            } else {
+                document.getElementById('wifi-wrapper').classList.remove('shake');
+                if (score <= p1) currentY = Y_START - ((Y_START - Y1) * (score / p1));
+                else if (score <= p2) currentY = Y1 - ((Y1 - Y2) * ((score - p1) / (p2 - p1)));
+                else if (score <= p3) currentY = Y2 - ((Y2 - Y3) * ((score - p2) / (p3 - p2)));
+                else currentY = Y3 - ((Y3 - Y4) * ((score - p3) / (targetScore - p3)));
+            }
             
             document.getElementById('water-rect').setAttribute('y', currentY);
 
@@ -182,29 +179,27 @@
             updateUI();
 
             setTimeout(() => {
-                clearedCount++;
-                level++;
-                score = 0;
-                
-                // 次の目標値を設定 (リーダー案: 3000 -> 10000 -> 100000...)
-                if (level === 2) targetScore = 10000;
-                else if (level === 3) targetScore = 100000;
-                else targetScore *= 5; // それ以降は5倍ずつ
-
+                document.getElementById('wifi-wrapper').classList.remove('shake');
                 const f = document.createElement('div');
                 f.className = 'clear-flash';
                 f.style.animation = 'flashEffect 1.2s ease-out forwards';
                 document.body.appendChild(f);
                 
-                document.getElementById('cleared-count').innerText = clearedCount;
-                document.getElementById('level-display').innerText = `Lv.${level} Wi-Fi`;
-                
                 setTimeout(() => {
+                    clearedCount++;
+                    level++;
+                    score = 0;
+                    if (level === 2) targetScore = 10000;
+                    else if (level === 3) targetScore = 100000;
+                    else targetScore *= 5;
+
+                    document.getElementById('cleared-count').innerText = clearedCount;
+                    document.getElementById('level-display').innerText = `Lv.${level} Wi-Fi`;
                     isLevelingUp = false;
                     f.remove();
                     updateUI();
-                }, 1200);
-            }, 300);
+                }, 600); // 光のピークで数値をリセット
+            }, 500); // 満タンの余韻
         }
 
         setInterval(() => {
