@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fi Clicker - Clicker Creators</title>
+    <title>Wi-Fiクリッカー - Clicker Creators</title>
     <style>
         body {
             margin: 0; padding: 0; width: 100%; height: 100dvh; overflow: hidden;
@@ -22,10 +22,9 @@
         #target-display { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
         #auto-mps-display { font-size: 18px; color: #87CEEB; }
 
-        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; transition: transform 0.1s; }
-        /* 満タン時の震え演出 */
-        .shake { animation: shake 0.3s infinite; }
-        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px,2px); } 50% { transform: translate(-2px,1px); } 75% { transform: translate(1px,-2px); } 100% { transform: translate(0,0); } }
+        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; transition: transform 0.05s; }
+        .shake { animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(3px,3px); } 50% { transform: translate(-3px,1px); } 75% { transform: translate(1px,-3px); } 100% { transform: translate(0,0); } }
 
         #shop-container {
             position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85);
@@ -117,9 +116,16 @@
             if (e.cancelable) e.preventDefault();
             let clickPower = 1 + Math.floor(level * 0.5);
             score += clickPower;
-            updateUI();
-            if (score >= targetScore) completeLevel();
-            else {
+            
+            if (score >= targetScore) {
+                score = targetScore;
+                updateUI();
+                // 画面の更新が反映されるのを待ってからクリア処理へ
+                requestAnimationFrame(() => {
+                    setTimeout(completeLevel, 50);
+                });
+            } else {
+                updateUI();
                 const x = e.clientX || (e.touches && e.touches[0].clientX);
                 const y = e.clientY || (e.touches && e.touches[0].clientY);
                 if (x && y) createPlusOne(x, y, clickPower);
@@ -143,13 +149,12 @@
             const Y_START = 21, Y1 = 15.8, Y2 = 12.87, Y3 = 7.98, Y4 = 3.07;
             let currentY;
 
-            // ★ 修正ロジック：しきい値を固定せず、targetScoreに対する割合で計算
             const p1 = targetScore * (100 / 3000); 
             const p2 = targetScore * (500 / 3000);
             const p3 = targetScore * (1000 / 3000);
 
             if (score >= targetScore) {
-                currentY = Y4; // 強制的に全埋まり
+                currentY = Y4; 
                 document.getElementById('wifi-wrapper').classList.add('shake');
             } else {
                 document.getElementById('wifi-wrapper').classList.remove('shake');
@@ -175,8 +180,9 @@
         function completeLevel() {
             if (isLevelingUp) return;
             isLevelingUp = true;
-            score = targetScore; 
-            updateUI();
+
+            // 震えを強化して「満タン」を強調
+            document.getElementById('wifi-wrapper').classList.add('shake');
 
             setTimeout(() => {
                 document.getElementById('wifi-wrapper').classList.remove('shake');
@@ -198,8 +204,8 @@
                     isLevelingUp = false;
                     f.remove();
                     updateUI();
-                }, 600); // 光のピークで数値をリセット
-            }, 500); // 満タンの余韻
+                }, 600);
+            }, 600); // 満タン状態で0.6秒しっかり見せる
         }
 
         setInterval(() => {
@@ -207,8 +213,15 @@
             let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
             if (totalMps > 0) {
                 score += (totalMps / 10);
-                updateUI();
-                if (score >= targetScore) completeLevel();
+                if (score >= targetScore) {
+                    score = targetScore;
+                    updateUI();
+                    requestAnimationFrame(() => {
+                        setTimeout(completeLevel, 50);
+                    });
+                } else {
+                    updateUI();
+                }
             }
         }, 100);
 
