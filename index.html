@@ -22,10 +22,9 @@
         #target-display { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
         #auto-mps-display { font-size: 18px; color: #87CEEB; }
 
-        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; transition: transform 0.05s; }
-        /* 満タン時の激しい震え */
-        .shake { animation: shake 0.15s infinite; }
-        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,2px); } 75% { transform: translate(2px,-4px); } 100% { transform: translate(0,0); } }
+        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; }
+        .shake { animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(0,0); } 50% { transform: translate(3px,3px); } 100% { transform: translate(0,0); } }
 
         #shop-container {
             position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85);
@@ -56,7 +55,7 @@
     </div>
 
     <div id="wifi-wrapper">
-        <svg id="wifi-svg" style="width:100%; height:100%;" viewBox="0 0 24 24">
+        <svg style="width:100%; height:100%;" viewBox="0 0 24 24">
             <defs>
                 <filter id="outline-filter">
                     <feMorphology operator="dilate" radius="0.3" in="SourceGraphic" result="dilated"/>
@@ -131,9 +130,7 @@
         function triggerClearSequence() {
             if (isLevelingUp) return;
             score = targetScore;
-            updateUI(); // まず100%にする
-            
-            // 描画を確実に待ってからアニメーション開始
+            updateUI();
             requestAnimationFrame(() => {
                 setTimeout(completeLevel, 50);
             });
@@ -153,7 +150,8 @@
             scoreDisp.innerText = Math.floor(score).toLocaleString();
             document.getElementById('target-display').innerText = `Target: ${targetScore.toLocaleString()} Mbps`;
             
-            const Y_START = 21, Y1 = 15.8, Y2 = 12.87, Y3 = 7.98, Y4 = 3.07;
+            // ★座標修正：Y_MAXを3.07から0.5に変更（てっぺんまで届かせる）
+            const Y_START = 21, Y1 = 15.8, Y2 = 12.87, Y3 = 7.98, Y_MAX = 0.5;
             let currentY;
 
             const p1 = targetScore * (100 / 3000); 
@@ -161,14 +159,14 @@
             const p3 = targetScore * (1000 / 3000);
 
             if (score >= targetScore) {
-                currentY = Y4; // 強制MAX
+                currentY = Y_MAX; // 完全に、物理的に「てっぺん」
                 document.getElementById('wifi-wrapper').classList.add('shake');
             } else {
                 document.getElementById('wifi-wrapper').classList.remove('shake');
                 if (score <= p1) currentY = Y_START - ((Y_START - Y1) * (score / p1));
                 else if (score <= p2) currentY = Y1 - ((Y1 - Y2) * ((score - p1) / (p2 - p1)));
                 else if (score <= p3) currentY = Y2 - ((Y2 - Y3) * ((score - p2) / (p3 - p2)));
-                else currentY = Y3 - ((Y3 - Y4) * ((score - p3) / (targetScore - p3)));
+                else currentY = Y3 - ((Y3 - Y_MAX) * ((score - p3) / (targetScore - p3)));
             }
             
             document.getElementById('water-rect').setAttribute('y', currentY);
@@ -188,7 +186,6 @@
             if (isLevelingUp) return;
             isLevelingUp = true;
 
-            // 完全に埋まった状態で800ms（0.8秒）キープ！
             setTimeout(() => {
                 const f = document.createElement('div');
                 f.className = 'clear-flash';
@@ -210,7 +207,7 @@
                     f.remove();
                     updateUI();
                 }, 600);
-            }, 800); 
+            }, 1000); // 1秒間、真っ白なてっぺんを見せつける！
         }
 
         setInterval(() => {
@@ -218,11 +215,8 @@
             let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
             if (totalMps > 0) {
                 score += (totalMps / 10);
-                if (score >= targetScore) {
-                    triggerClearSequence();
-                } else {
-                    updateUI();
-                }
+                if (score >= targetScore) triggerClearSequence();
+                else updateUI();
             }
         }, 100);
 
@@ -235,10 +229,5 @@
             el.animate([{ transform: 'translate(-50%, -50%)', opacity: 1 }, { transform: 'translate(-50%, -150px)', opacity: 0 }], { duration: 600 }).onfinish = () => el.remove();
         }
 
-        const wrapper = document.getElementById('wifi-wrapper');
-        wrapper.addEventListener('touchstart', handleAction, { passive: false });
-        wrapper.addEventListener('mousedown', (e) => { if (window.ontouchstart === undefined) handleAction(e); });
-    </script>
-</body>
-</html>
+        const wrapper
 
