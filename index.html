@@ -14,31 +14,41 @@
             touch-action: none; color: white;
         }
 
-        #top-ui { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; z-index: 100; }
-        .ui-pill { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        #top-ui { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
+        .ui-pill { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; pointer-events: auto; }
 
-        #score-container { position: absolute; top: 12dvh; text-align: center; z-index: 10; pointer-events: none; width: 100%; }
+        #score-container { position: absolute; top: 12dvh; text-align: center; z-index: 50; pointer-events: none; width: 100%; }
         #score-display { font-size: 48px; font-weight: 900; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
         #target-display { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
         #auto-mps-display { font-size: 18px; color: #87CEEB; }
 
-        #wifi-wrapper { width: 65vmin; height: 65vmin; position: relative; cursor: pointer; z-index: 5; margin-top: -2dvh; }
+        /* クリック判定を最優先に */
+        #wifi-wrapper { 
+            width: 70vmin; height: 70vmin; 
+            position: relative; 
+            cursor: pointer; 
+            z-index: 80; /* ショップよりは下、背景よりは上 */
+            margin-top: -2dvh;
+            display: flex; justify-content: center; align-items: center;
+        }
         .shake { animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(0,0); } 50% { transform: translate(3px,3px); } 100% { transform: translate(0,0); } }
 
         #shop-container {
             position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85);
-            border-top: 2px solid #87CEEB; padding: 10px 0; max-height: 38dvh; overflow-y: auto; z-index: 150;
+            border-top: 2px solid #87CEEB; padding: 10px 0; max-height: 38dvh; overflow-y: auto; 
+            z-index: 150; /* ショップは一番上 */
         }
         .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .shop-item.disabled { opacity: 0.3; filter: grayscale(1); }
-        .item-name { font-weight: bold; font-size: 15px; }
-        .item-cost { font-size: 13px; color: #ffcc00; }
-        .item-count { font-size: 20px; font-weight: 900; color: rgba(255,255,255,0.2); }
 
-        .plus-one { position: absolute; color: white; font-weight: bold; font-size: 28px; pointer-events: none; z-index: 20; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .plus-one { position: absolute; color: white; font-weight: bold; font-size: 28px; pointer-events: none; z-index: 200; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        
         @keyframes flashEffect { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
-        .clear-flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; pointer-events: none; z-index: 200; opacity: 0; }
+        .clear-flash { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: white; pointer-events: none; z-index: 300; opacity: 0; 
+        }
     </style>
 </head>
 <body>
@@ -55,7 +65,7 @@
     </div>
 
     <div id="wifi-wrapper">
-        <svg style="width:100%; height:100%;" viewBox="0 0 24 24">
+        <svg style="width:90%; height:90%; pointer-events: none;" viewBox="0 0 24 24">
             <defs>
                 <filter id="outline-filter">
                     <feMorphology operator="dilate" radius="0.3" in="SourceGraphic" result="dilated"/>
@@ -113,7 +123,9 @@
 
         function handleAction(e) {
             if (isLevelingUp) return;
-            if (e.cancelable) e.preventDefault();
+            // タッチイベントのデフォルト動作（ズーム等）を防止
+            if (e.type === 'touchstart' && e.cancelable) e.preventDefault();
+            
             let clickPower = 1 + Math.floor(level * 0.5);
             score += clickPower;
             
@@ -121,9 +133,10 @@
                 triggerClearSequence();
             } else {
                 updateUI();
-                const x = e.clientX || (e.touches && e.touches[0].clientX);
-                const y = e.clientY || (e.touches && e.touches[0].clientY);
-                if (x && y) createPlusOne(x, y, clickPower);
+                // タップ位置の取得
+                const x = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
+                const y = (e.type === 'touchstart') ? e.touches[0].clientY : e.clientY;
+                createPlusOne(x, y, clickPower);
             }
         }
 
@@ -131,9 +144,8 @@
             if (isLevelingUp) return;
             score = targetScore;
             updateUI();
-            requestAnimationFrame(() => {
-                setTimeout(completeLevel, 50);
-            });
+            isLevelingUp = true; // 連打防止
+            setTimeout(completeLevel, 50);
         }
 
         function buyItem(id) {
@@ -146,29 +158,21 @@
         }
 
         function updateUI() {
-            const scoreDisp = document.getElementById('score-display');
-            scoreDisp.innerText = Math.floor(score).toLocaleString();
+            document.getElementById('score-display').innerText = Math.floor(score).toLocaleString();
             document.getElementById('target-display').innerText = `Target: ${targetScore.toLocaleString()} Mbps`;
             
-            // ★座標修正：Y_MAXを3.07から0.5に変更（てっぺんまで届かせる）
-            const Y_START = 21, Y1 = 15.8, Y2 = 12.87, Y3 = 7.98, Y_MAX = 0.5;
+            // Y座標：0.5がてっぺん、21が底
+            const Y_START = 21, Y_MAX = 0.5;
             let currentY;
 
-            const p1 = targetScore * (100 / 3000); 
-            const p2 = targetScore * (500 / 3000);
-            const p3 = targetScore * (1000 / 3000);
-
             if (score >= targetScore) {
-                currentY = Y_MAX; // 完全に、物理的に「てっぺん」
+                currentY = Y_MAX;
                 document.getElementById('wifi-wrapper').classList.add('shake');
             } else {
                 document.getElementById('wifi-wrapper').classList.remove('shake');
-                if (score <= p1) currentY = Y_START - ((Y_START - Y1) * (score / p1));
-                else if (score <= p2) currentY = Y1 - ((Y1 - Y2) * ((score - p1) / (p2 - p1)));
-                else if (score <= p3) currentY = Y2 - ((Y2 - Y3) * ((score - p2) / (p3 - p2)));
-                else currentY = Y3 - ((Y3 - Y_MAX) * ((score - p3) / (targetScore - p3)));
+                // 単純な割合で水位を計算
+                currentY = Y_START - ((Y_START - Y_MAX) * (score / targetScore));
             }
-            
             document.getElementById('water-rect').setAttribute('y', currentY);
 
             let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
@@ -183,9 +187,7 @@
         }
 
         function completeLevel() {
-            if (isLevelingUp) return;
-            isLevelingUp = true;
-
+            // 1秒間、満タンを見せる
             setTimeout(() => {
                 const f = document.createElement('div');
                 f.className = 'clear-flash';
@@ -207,9 +209,10 @@
                     f.remove();
                     updateUI();
                 }, 600);
-            }, 1000); // 1秒間、真っ白なてっぺんを見せつける！
+            }, 800); 
         }
 
+        // 放置での加算
         setInterval(() => {
             if (isLevelingUp) return;
             let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
@@ -229,5 +232,11 @@
             el.animate([{ transform: 'translate(-50%, -50%)', opacity: 1 }, { transform: 'translate(-50%, -150px)', opacity: 0 }], { duration: 600 }).onfinish = () => el.remove();
         }
 
-        const wrapper
+        // クリックとタッチの両方に対応
+        const wrapper = document.getElementById('wifi-wrapper');
+        wrapper.addEventListener('touchstart', handleAction, { passive: false });
+        wrapper.addEventListener('mousedown', handleAction);
+    </script>
+</body>
+</html>
 
