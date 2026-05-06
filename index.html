@@ -1,81 +1,100 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fiクリッカー - Clicker Creators</title>
+    <title>Wi-Fi Clicker: Speed Master</title>
     <style>
+        :root {
+            --primary: #87CEEB;
+            --bg: #051622;
+            --accent: #ffcc00;
+        }
         body {
             margin: 0; padding: 0; width: 100%; height: 100dvh; overflow: hidden;
-            background: radial-gradient(circle at center, #1a4a72 0%, #051622 100%);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
-            touch-action: none; color: white;
+            background: radial-gradient(circle at center, #1a4a72 0%, var(--bg) 100%);
+            display: flex; flex-direction: column; align-items: center;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            user-select: none; -webkit-user-select: none; touch-action: none; color: white;
         }
 
-        #top-ui { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .ui-pill { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; pointer-events: auto; }
+        /* Main UI */
+        #header { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; z-index: 10; }
+        .ui-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; }
 
-        #score-container { position: absolute; top: 12dvh; text-align: center; z-index: 50; pointer-events: none; width: 100%; }
-        #score-display { font-size: 48px; font-weight: 900; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
-        #target-display { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
-        #auto-mps-display { font-size: 18px; color: #87CEEB; }
+        #stats-container { margin-top: 15dvh; text-align: center; z-index: 5; pointer-events: none; }
+        #score-display { font-size: 52px; font-weight: 900; text-shadow: 0 0 20px rgba(135, 206, 235, 0.4); }
+        #target-info { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 4px; letter-spacing: 1px; }
+        #mps-display { font-size: 20px; color: var(--primary); font-weight: 600; }
 
-        /* クリック判定を最優先に */
-        #wifi-wrapper { 
-            width: 70vmin; height: 70vmin; 
-            position: relative; 
-            cursor: pointer; 
-            z-index: 80; /* ショップよりは下、背景よりは上 */
-            margin-top: -2dvh;
-            display: flex; justify-content: center; align-items: center;
-        }
+        /* Wi-Fi Icon Area */
+        #wifi-wrapper { width: 75vmin; height: 75vmin; position: relative; cursor: pointer; z-index: 50; display: flex; justify-content: center; align-items: center; transition: transform 0.05s; }
+        #wifi-wrapper:active { transform: scale(0.95); }
         .shake { animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(0,0); } 50% { transform: translate(3px,3px); } 100% { transform: translate(0,0); } }
 
-        #shop-container {
-            position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85);
-            border-top: 2px solid #87CEEB; padding: 10px 0; max-height: 38dvh; overflow-y: auto; 
-            z-index: 150; /* ショップは一番上 */
+        /* Bottom Menu */
+        #footer { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; z-index: 60; }
+        #shop-trigger {
+            background: rgba(255,255,255,0.15); border: 2px solid var(--primary); color: white;
+            padding: 15px 60px; border-radius: 30px; font-size: 18px; font-weight: bold;
+            cursor: pointer; backdrop-filter: blur(5px); box-shadow: 0 0 15px rgba(135, 206, 235, 0.3);
         }
-        .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .shop-item.disabled { opacity: 0.3; filter: grayscale(1); }
 
-        .plus-one { position: absolute; color: white; font-weight: bold; font-size: 28px; pointer-events: none; z-index: 200; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        
-        @keyframes flashEffect { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
-        .clear-flash { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: white; pointer-events: none; z-index: 300; opacity: 0; 
+        /* Full Screen Shop Overlay */
+        #shop-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 22, 34, 0.98); z-index: 200;
+            display: none; flex-direction: column; align-items: center;
+            animation: fadeIn 0.3s ease-out;
         }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        #shop-header { width: 100%; padding: 40px 0 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        #shop-header h2 { margin: 0; font-size: 28px; letter-spacing: 2px; }
+
+        #shop-list { width: 100%; overflow-y: auto; flex: 1; }
+        .shop-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 25px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.2s;
+        }
+        .shop-item:active { background: rgba(255,255,255,0.1); }
+        .shop-item.disabled { opacity: 0.3; filter: grayscale(1); }
+        .item-main { display: flex; flex-direction: column; }
+        .item-name { font-weight: bold; font-size: 16px; color: var(--primary); }
+        .item-cost { font-size: 14px; color: var(--accent); margin-top: 4px; }
+        .item-count { font-size: 24px; font-weight: 900; color: rgba(255,255,255,0.15); }
+
+        #close-shop {
+            margin: 20px 0 40px; background: white; color: black;
+            padding: 12px 50px; border-radius: 25px; font-weight: bold; cursor: pointer;
+        }
+
+        /* Visual Effects */
+        .plus-one { position: absolute; color: white; font-weight: bold; font-size: 24px; pointer-events: none; z-index: 100; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        @keyframes flashEffect { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+        .clear-flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; pointer-events: none; z-index: 300; opacity: 0; }
     </style>
 </head>
 <body>
 
-    <div id="top-ui">
+    <div id="header">
         <div class="ui-pill" id="level-display">Lv.1 Wi-Fi</div>
-        <div class="ui-pill">📡 × <span id="cleared-count">0</span></div>
+        <div class="ui-pill">📡 Completed: <span id="cleared-count">0</span></div>
     </div>
 
-    <div id="score-container">
-        <div id="target-display">Target: 3,000 Mbps</div>
+    <div id="stats-container">
+        <div id="target-info">GOAL: 3,000 Mbps</div>
         <div id="score-display">0</div>
-        <div id="auto-mps-display">0 Mbps/s</div>
+        <div id="mps-display">0 Mbps/s</div>
     </div>
 
     <div id="wifi-wrapper">
-        <svg style="width:90%; height:90%; pointer-events: none;" viewBox="0 0 24 24">
+        <svg style="width:100%; height:100%; pointer-events: none;" viewBox="0 0 24 24">
             <defs>
-                <filter id="outline-filter">
-                    <feMorphology operator="dilate" radius="0.3" in="SourceGraphic" result="dilated"/>
-                    <feFlood flood-color="black" result="black"/>
-                    <feComposite in="black" in2="dilated" operator="in" result="outline"/>
-                    <feComposite in="SourceGraphic" in2="outline" operator="over"/>
-                </filter>
-                <clipPath id="water-clip">
-                    <rect id="water-rect" x="0" y="21" width="24" height="24" />
-                </clipPath>
+                <filter id="outline-filter"><feMorphology operator="dilate" radius="0.3" in="SourceGraphic" result="dilated"/><feFlood flood-color="black" result="black"/><feComposite in="black" in2="dilated" operator="in" result="outline"/><feComposite in="SourceGraphic" in2="outline" operator="over"/></filter>
+                <clipPath id="water-clip"><rect id="water-rect" x="0" y="21" width="24" height="24" /></clipPath>
             </defs>
             <g filter="url(#outline-filter)">
                 <g stroke="#444444" fill="none" stroke-width="2.2" stroke-linecap="butt">
@@ -90,23 +109,17 @@
         </svg>
     </div>
 
-    <div id="shop-container">
-        <div class="shop-item" onclick="buyItem(0)">
-            <div class="item-info"><span class="item-name">中古ルーター (+1/s)</span><span class="item-cost" id="cost-0">Cost: 15</span></div>
-            <div class="item-count" id="count-0">0</div>
+    <div id="footer">
+        <button id="shop-trigger" onclick="toggleShop(true)">SHOP / UPGRADE</button>
+    </div>
+
+    <div id="shop-overlay">
+        <div id="shop-header">
+            <h2>UPGRADES</h2>
+            <div id="shop-current-score" style="color: var(--accent); font-weight: bold; margin-top: 10px;">0 Mbps</div>
         </div>
-        <div class="shop-item" onclick="buyItem(1)">
-            <div class="item-info"><span class="item-name">中継機 (+10/s)</span><span class="item-cost" id="cost-1">Cost: 200</span></div>
-            <div class="item-count" id="count-1">0</div>
-        </div>
-        <div class="shop-item" onclick="buyItem(2)">
-            <div class="item-info"><span class="item-name">光回線契約 (+80/s)</span><span class="item-cost" id="cost-2">Cost: 2500</span></div>
-            <div class="item-count" id="count-2">0</div>
-        </div>
-        <div class="shop-item" onclick="buyItem(3)">
-            <div class="item-info"><span class="item-name">業務用基地局 (+500/s)</span><span class="item-cost" id="cost-3">Cost: 15000</span></div>
-            <div class="item-count" id="count-3">0</div>
-        </div>
+        <div id="shop-list"></div>
+        <button id="close-shop" onclick="toggleShop(false)">CLOSE</button>
     </div>
 
     <script>
@@ -117,107 +130,127 @@
         let isLevelingUp = false;
 
         const items = [
-            { cost: 15, mps: 1, count: 0 }, { cost: 200, mps: 10, count: 0 },
-            { cost: 2500, mps: 80, count: 0 }, { cost: 15000, mps: 500, count: 0 }
+            { name: "Used Router", cost: 15, mps: 1, count: 0 },
+            { name: "Signal Extender", cost: 200, mps: 10, count: 0 },
+            { name: "Fiber Contract", cost: 2500, mps: 80, count: 0 },
+            { name: "Enterprise Base", cost: 15000, mps: 500, count: 0 },
+            { name: "Satellite Link", cost: 100000, mps: 2500, count: 0 },
+            { name: "Ocean Fiber", cost: 800000, mps: 12000, count: 0 },
+            { name: "Ultra 5G Tower", cost: 5000000, mps: 65000, count: 0 },
+            { name: "Quantum Server", cost: 40000000, mps: 400000, count: 0 },
+            { name: "THz Transmitter", cost: 300000000, mps: 2500000, count: 0 },
+            { name: "Galactic Network", cost: 2000000000, mps: 15000000, count: 0 }
         ];
+
+        function initShop() {
+            const container = document.getElementById('shop-list');
+            container.innerHTML = '';
+            items.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'shop-item';
+                div.id = `item-${i}`;
+                div.onclick = () => buyItem(i);
+                div.innerHTML = `
+                    <div class="item-main">
+                        <span class="item-name">${item.name} (+${item.mps.toLocaleString()}/s)</span>
+                        <span class="item-cost" id="cost-${i}">Cost: ${item.cost.toLocaleString()} Mbps</span>
+                    </div>
+                    <div class="item-count" id="count-${i}">0</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleShop(show) {
+            document.getElementById('shop-overlay').style.display = show ? 'flex' : 'none';
+            if(show) updateUI();
+        }
 
         function handleAction(e) {
             if (isLevelingUp) return;
-            // タッチイベントのデフォルト動作（ズーム等）を防止
             if (e.type === 'touchstart' && e.cancelable) e.preventDefault();
             
-            let clickPower = 1 + Math.floor(level * 0.5);
+            let clickPower = 1 + Math.floor(level * 0.5) + Math.floor(getTotalMps() * 0.05);
             score += clickPower;
             
-            if (score >= targetScore) {
-                triggerClearSequence();
-            } else {
+            if (score >= targetScore) triggerClearSequence();
+            else {
                 updateUI();
-                // タップ位置の取得
                 const x = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 const y = (e.type === 'touchstart') ? e.touches[0].clientY : e.clientY;
                 createPlusOne(x, y, clickPower);
             }
         }
 
-        function triggerClearSequence() {
-            if (isLevelingUp) return;
-            score = targetScore;
-            updateUI();
-            isLevelingUp = true; // 連打防止
-            setTimeout(completeLevel, 50);
+        function getTotalMps() {
+            return items.reduce((sum, item) => sum + (item.mps * item.count), 0);
         }
 
         function buyItem(id) {
             if (score >= items[id].cost && !isLevelingUp) {
                 score -= items[id].cost;
                 items[id].count++;
-                items[id].cost = Math.floor(items[id].cost * 1.25);
+                items[id].cost = Math.floor(items[id].cost * 1.3);
                 updateUI();
             }
         }
 
         function updateUI() {
-            document.getElementById('score-display').innerText = Math.floor(score).toLocaleString();
-            document.getElementById('target-display').innerText = `Target: ${targetScore.toLocaleString()} Mbps`;
+            const formattedScore = Math.floor(score).toLocaleString();
+            document.getElementById('score-display').innerText = formattedScore;
+            document.getElementById('shop-current-score').innerText = formattedScore + " Mbps";
+            document.getElementById('target-info').innerText = `GOAL: ${targetScore.toLocaleString()} Mbps`;
             
-            // Y座標：0.5がてっぺん、21が底
             const Y_START = 21, Y_MAX = 0.5;
-            let currentY;
-
-            if (score >= targetScore) {
-                currentY = Y_MAX;
-                document.getElementById('wifi-wrapper').classList.add('shake');
-            } else {
-                document.getElementById('wifi-wrapper').classList.remove('shake');
-                // 単純な割合で水位を計算
-                currentY = Y_START - ((Y_START - Y_MAX) * (score / targetScore));
-            }
+            let currentY = (score >= targetScore) ? Y_MAX : Y_START - ((Y_START - Y_MAX) * (score / targetScore));
             document.getElementById('water-rect').setAttribute('y', currentY);
+            
+            if (score >= targetScore) document.getElementById('wifi-wrapper').classList.add('shake');
+            else document.getElementById('wifi-wrapper').classList.remove('shake');
 
-            let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
-            document.getElementById('auto-mps-display').innerText = `${totalMps.toLocaleString()} Mbps/s`;
+            document.getElementById('mps-display').innerText = `${getTotalMps().toLocaleString()} Mbps/s`;
             
             items.forEach((item, i) => {
-                document.getElementById(`cost-${i}`).innerText = `Cost: ${item.cost.toLocaleString()}`;
+                document.getElementById(`cost-${i}`).innerText = `Cost: ${item.cost.toLocaleString()} Mbps`;
                 document.getElementById(`count-${i}`).innerText = item.count;
-                const el = document.getElementsByClassName('shop-item')[i];
+                const el = document.getElementById(`item-${i}`);
                 if (score < item.cost) el.classList.add('disabled'); else el.classList.remove('disabled');
             });
         }
 
-        function completeLevel() {
-            // 1秒間、満タンを見せる
-            setTimeout(() => {
-                const f = document.createElement('div');
-                f.className = 'clear-flash';
-                f.style.animation = 'flashEffect 1.2s ease-out forwards';
-                document.body.appendChild(f);
-                
-                setTimeout(() => {
-                    document.getElementById('wifi-wrapper').classList.remove('shake');
-                    clearedCount++;
-                    level++;
-                    score = 0;
-                    if (level === 2) targetScore = 10000;
-                    else if (level === 3) targetScore = 100000;
-                    else targetScore *= 5;
-
-                    document.getElementById('cleared-count').innerText = clearedCount;
-                    document.getElementById('level-display').innerText = `Lv.${level} Wi-Fi`;
-                    isLevelingUp = false;
-                    f.remove();
-                    updateUI();
-                }, 600);
-            }, 800); 
+        function triggerClearSequence() {
+            if (isLevelingUp) return;
+            score = targetScore;
+            updateUI();
+            isLevelingUp = true;
+            setTimeout(completeLevel, 1000); 
         }
 
-        // 放置での加算
+        function completeLevel() {
+            const f = document.createElement('div');
+            f.className = 'clear-flash';
+            f.style.animation = 'flashEffect 1.2s ease-out forwards';
+            document.body.appendChild(f);
+            
+            setTimeout(() => {
+                clearedCount++;
+                level++;
+                score = 0;
+                targetScore = Math.floor(3000 * Math.pow(4.5, level - 1));
+                
+                document.getElementById('cleared-count').innerText = clearedCount;
+                document.getElementById('level-display').innerText = `Lv.${level} Wi-Fi`;
+                isLevelingUp = false;
+                f.remove();
+                updateUI();
+            }, 600);
+        }
+
         setInterval(() => {
             if (isLevelingUp) return;
-            let totalMps = items.reduce((sum, item) => sum + (item.mps * item.count), 0);
-            if (totalMps > 0) {
-                score += (totalMps / 10);
+            let mps = getTotalMps();
+            if (mps > 0) {
+                score += (mps / 10);
                 if (score >= targetScore) triggerClearSequence();
                 else updateUI();
             }
@@ -225,18 +258,16 @@
 
         function createPlusOne(x, y, val) {
             const el = document.createElement('div');
-            el.className = 'plus-one'; el.innerText = `+${val}`;
+            el.className = 'plus-one'; el.innerText = `+${val.toLocaleString()}`;
             el.style.left = `${x}px`; el.style.top = `${y}px`;
-            el.style.transform = 'translate(-50%, -50%)';
             document.body.appendChild(el);
             el.animate([{ transform: 'translate(-50%, -50%)', opacity: 1 }, { transform: 'translate(-50%, -150px)', opacity: 0 }], { duration: 600 }).onfinish = () => el.remove();
         }
 
-        // クリックとタッチの両方に対応
+        initShop();
         const wrapper = document.getElementById('wifi-wrapper');
         wrapper.addEventListener('touchstart', handleAction, { passive: false });
         wrapper.addEventListener('mousedown', handleAction);
     </script>
 </body>
 </html>
-
